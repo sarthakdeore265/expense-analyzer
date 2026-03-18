@@ -17,18 +17,14 @@ st.set_page_config(
 )
 
 # =========================
-# 🎨 PREMIUM CSS
+# 🎨 PREMIUM UI CSS
 # =========================
 st.markdown("""
 <style>
-
-/* Background */
 .stApp {
     background: linear-gradient(135deg, #0f172a, #1e293b);
     color: white;
 }
-
-/* Glass Card */
 .card {
     background: rgba(255,255,255,0.05);
     padding: 20px;
@@ -36,25 +32,18 @@ st.markdown("""
     backdrop-filter: blur(10px);
     box-shadow: 0px 4px 20px rgba(0,0,0,0.3);
 }
-
-/* Buttons */
 .stButton>button {
     background: linear-gradient(90deg, #22c55e, #4ade80);
     color: black;
     border-radius: 10px;
     font-weight: bold;
 }
-
-/* Sidebar */
 section[data-testid="stSidebar"] {
     background-color: #020617;
 }
-
-/* Titles */
 h1, h2, h3 {
     color: #e2e8f0;
 }
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -155,20 +144,21 @@ elif choice == "Dashboard":
             fig = px.pie(category_data, values="amount", names="category", hole=0.5)
             fig.update_layout(
                 paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
                 font_color='white'
             )
             st.plotly_chart(fig, use_container_width=True)
 
         with col2:
             st.markdown("### 📈 Monthly Trend")
-            df['month'] = df['date'].dt.to_period('M')
+
+            # ✅ FIXED (NO PERIOD TYPE)
+            df['month'] = df['date'].dt.strftime('%Y-%m')
             monthly = df.groupby('month')['amount'].sum().reset_index()
+            monthly = monthly.sort_values("month")
 
             fig2 = px.line(monthly, x="month", y="amount")
             fig2.update_layout(
                 paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
                 font_color='white'
             )
             st.plotly_chart(fig2, use_container_width=True)
@@ -191,7 +181,12 @@ elif choice == "Dashboard":
 
         st.dataframe(df[["date", "Category", "amount", "description"]])
 
-        st.download_button("⬇ Download Report", df.to_csv(index=False), "expenses.csv")
+        # ⬇ DOWNLOAD
+        st.download_button(
+            "⬇ Download Report",
+            df.to_csv(index=False),
+            "expenses.csv"
+        )
 
     else:
         st.info("No data yet. Add some expenses!")
@@ -218,9 +213,9 @@ elif choice == "Insights":
         st.info(f"💡 You spend the most on **{top_category}**")
 
         if category_data.max() > (total * 0.4):
-            st.warning("⚠ High spending detected — consider reducing this category.")
+            st.warning("⚠ High spending detected — consider reducing it.")
 
-        st.success("✅ You're actively tracking finances — great job!")
+        st.success("✅ You're tracking your expenses consistently!")
 
     else:
         st.info("Add data to see insights")
