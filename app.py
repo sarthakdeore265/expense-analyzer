@@ -59,3 +59,16 @@ if df is not None and not df.empty:
 
 else:
     st.info("No data yet. Add some expenses!")
+    menu = ["Dashboard", "Add Expense", "Insights"]
+choice = st.sidebar.selectbox("Menu", menu)
+if choice == "Add Expense":
+    st.header("➕ Add Expense")
+    # your input code
+
+elif choice == "Dashboard":
+    st.header("📊 Dashboard")
+    # charts
+
+elif choice == "Insights":
+    st.header("🤖 Insights")
+    # prediction + alerts
