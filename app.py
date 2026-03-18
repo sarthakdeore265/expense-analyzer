@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
+import plotly.express as px
 
 from database import create_table
 from expense_manager import add_expense, get_expenses
@@ -16,7 +17,7 @@ st.set_page_config(
 )
 
 # =========================
-# 🎨 CUSTOM CSS (MODERN LOOK)
+# 🎨 CUSTOM CSS (MODERN DARK UI)
 # =========================
 st.markdown("""
 <style>
@@ -85,55 +86,88 @@ elif choice == "Dashboard":
     if df is not None and not df.empty:
         df['date'] = pd.to_datetime(df['date'])
 
-        # 🔹 Metrics Cards
+        # 💳 Cards
         total = df["amount"].sum()
         avg = df["amount"].mean()
+        count = len(df)
 
         col1, col2, col3 = st.columns(3)
 
-        with col1:
-            st.metric("💸 Total Spending", f"₹{total}")
+        col1.markdown(f"""
+        <div style="background:#1c1f26;padding:20px;border-radius:10px">
+        <h4>💸 Total</h4>
+        <h2>₹{total}</h2>
+        </div>
+        """, unsafe_allow_html=True)
 
-        with col2:
-            st.metric("📊 Average Expense", f"₹{avg:.2f}")
+        col2.markdown(f"""
+        <div style="background:#1c1f26;padding:20px;border-radius:10px">
+        <h4>📊 Average</h4>
+        <h2>₹{avg:.2f}</h2>
+        </div>
+        """, unsafe_allow_html=True)
 
-        with col3:
-            st.metric("🧾 Transactions", len(df))
+        col3.markdown(f"""
+        <div style="background:#1c1f26;padding:20px;border-radius:10px">
+        <h4>🧾 Transactions</h4>
+        <h2>{count}</h2>
+        </div>
+        """, unsafe_allow_html=True)
 
         st.markdown("---")
 
-        # 🔹 Filters
+        # 📅 Filters
         col1, col2 = st.columns(2)
-
         with col1:
             start = st.date_input("Start Date")
-
         with col2:
             end = st.date_input("End Date")
 
         df = df[(df['date'] >= str(start)) & (df['date'] <= str(end))]
 
-        # 🔹 Charts
+        # 📊 Charts
         col1, col2 = st.columns(2)
 
         with col1:
-            st.subheader("📂 Category Breakdown")
-            category_data = df.groupby("category")["amount"].sum()
-            st.bar_chart(category_data)
+            st.subheader("📂 Category Split")
+            category_data = df.groupby("category")["amount"].sum().reset_index()
+
+            fig = px.pie(
+                category_data,
+                values="amount",
+                names="category",
+                hole=0.4
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
         with col2:
             st.subheader("📈 Monthly Trend")
             df['month'] = df['date'].dt.to_period('M')
-            monthly = df.groupby('month')['amount'].sum()
-            st.line_chart(monthly)
+            monthly = df.groupby('month')['amount'].sum().reset_index()
+
+            fig2 = px.line(monthly, x="month", y="amount")
+            st.plotly_chart(fig2, use_container_width=True)
 
         st.markdown("---")
 
-        # 🔹 Data Table
-        st.subheader("📋 All Transactions")
-        st.dataframe(df)
+        # 📋 Transactions Table
+        st.subheader("📋 Transactions")
 
-        # 🔹 Download
+        def get_icon(cat):
+            icons = {
+                "Food": "🍔",
+                "Travel": "✈",
+                "Shopping": "🛍",
+                "Bills": "📄",
+                "Other": "📦"
+            }
+            return icons.get(cat, "📦")
+
+        df["Category"] = df["category"].apply(lambda x: f"{get_icon(x)} {x}")
+
+        st.dataframe(df[["date", "Category", "amount", "description"]])
+
+        # ⬇ Download
         st.download_button(
             "⬇ Download Report",
             df.to_csv(index=False),
@@ -152,21 +186,22 @@ elif choice == "Insights":
     df = get_expenses()
 
     if df is not None and not df.empty:
-        prediction = predict_spending(df)
-
-        st.metric("🔮 Predicted Next Month", f"₹{prediction}")
-
-        category_data = df.groupby("category")["amount"].sum()
         total = df["amount"].sum()
+
+        prediction = predict_spending(df)
+        st.metric("🔮 Next Month Prediction", f"₹{prediction}")
 
         st.markdown("---")
 
-        # 🔹 Smart Alerts
-        if category_data.max() > (total * 0.4):
-            st.warning("⚠ High spending detected in one category!")
+        category_data = df.groupby("category")["amount"].sum()
+        top_category = category_data.idxmax()
 
-        # 🔹 AI-like Insight
-        st.info(f"💡 You have spent ₹{total} so far. Try reducing unnecessary expenses.")
+        st.info(f"💡 You spend most on **{top_category}**")
+
+        if category_data.max() > (total * 0.4):
+            st.warning("⚠ Try reducing spending in this category!")
+
+        st.success("✅ Keep tracking your expenses regularly!")
 
     else:
         st.info("Add data to see insights")
