@@ -1,22 +1,19 @@
-import sqlite3
+import streamlit as st
 
-def connect_db():
-    conn = sqlite3.connect("expenses.db")
-    return conn
+def get_db_connection():
+    # Streamlit manages the connection pool automatically
+    return st.connection("postgresql", type="sql")
 
 def create_table():
-    conn = connect_db()
-    cursor = conn.cursor()
-    
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS expenses (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        date TEXT,
-        category TEXT,
-        amount REAL,
-        description TEXT
-    )
-    """)
-    
-    conn.commit()
-    conn.close()
+    conn = get_db_connection()
+    with conn.session as session:
+        session.execute("""
+            CREATE TABLE IF NOT EXISTS expenses (
+                id SERIAL PRIMARY KEY,
+                date TEXT,
+                category TEXT,
+                amount REAL,
+                description TEXT
+            );
+        """)
+        session.commit()
