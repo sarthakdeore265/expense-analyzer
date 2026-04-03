@@ -1,25 +1,18 @@
-import sqlite3
+import streamlit as st
 import pandas as pd
-
-def connect_db():
-    return sqlite3.connect("expenses.db")
+from database import get_db_connection
 
 def add_expense(date, category, amount, description):
-    conn = connect_db()
-    cursor = conn.cursor()
-    
-    cursor.execute(
-        "INSERT INTO expenses (date, category, amount, description) VALUES (?, ?, ?, ?)",
-        (date, category, amount, description)
-    )
-    
-    conn.commit()
-    conn.close()
+    conn = get_db_connection()
+    with conn.session as session:
+        session.execute(
+            "INSERT INTO expenses (date, category, amount, description) VALUES (:date, :cat, :amt, :desc)",
+            {"date": date, "cat": category, "amt": amount, "desc": description}
+        )
+        session.commit()
 
 def get_expenses():
-    conn = connect_db()
-    
-    df = pd.read_sql_query("SELECT * FROM expenses", conn)
-    
-    conn.close()
+    conn = get_db_connection()
+    # query() returns a pandas DataFrame automatically
+    df = conn.query("SELECT * FROM expenses", ttl=0) # ttl=0 ensures fresh data
     return df
